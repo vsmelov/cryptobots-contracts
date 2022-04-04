@@ -1,4 +1,5 @@
-pragma solidity 0.8.6;
+// SPDX-License-Identifier: MIT
+pragma solidity 0.8.10;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
@@ -10,11 +11,10 @@ contract BITS is ERC20, Pausable, AccessControl, ERC20Permit {
     bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
 
     constructor() ERC20("BITS", "BITS") ERC20Permit("BITS") {
-        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
-        _grantRole(PAUSER_ROLE, msg.sender);
+        _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        _setupRole(PAUSER_ROLE, msg.sender);
 
-//        _mint()
-        // require(totalSupply() == 1e9 * 1e18
+        _mint(msg.sender, 1e9 * 1e18);
     }
 
     function pause() public onlyRole(PAUSER_ROLE) {

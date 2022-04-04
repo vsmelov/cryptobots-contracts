@@ -1,8 +1,27 @@
 compiler:
     solc:
-        version: 0.8.6
+        version: null
         remappings:
             - "@openzeppelin=OpenZeppelin/openzeppelin-contracts@4.3.3"
 
 dependencies:
     - OpenZeppelin/openzeppelin-contracts@4.3.3
+
+
+reports:
+    exclude_contracts:
+        - "ERC721"
+        - "ERC20PresetMinterPauser"
+        - "ERC20Pausable"
+        - "ERC20"
+        - "AccessControl"
+        - "Address"
+        - "ERC721Enumerable"
+        - "ERC721URIStorage"
+        - "SafeERC20"
+        - "Initializable"
+        - "ReentrancyGuard"
+        - "IERC20"
+        - "IERC721"
+        - "Math"
+        - "Ownable"
