@@ -11,6 +11,7 @@ dependencies:
 reports:
     exclude_contracts:
         - "ERC721"
+        - "ERC721Pausable"
         - "ERC20PresetMinterPauser"
         - "ERC20Pausable"
         - "ERC20"

@@ -91,7 +91,7 @@ contract BotCoreWrapper is IGetBot, ReentrancyGuard, Ownable, ERC721, ERC721Paus
     }
 
     function unwrap(uint256 tokenId) external nonReentrant {
-        require(ownerOf(tokenId) == msg.sender, "NFTWrapper: unwrap from incorrect owner");
+        require(ownerOf(tokenId) == msg.sender, "Wrapper: unwrap from incorrect owner");
         _burn(tokenId);
         botCore.transfer(msg.sender, tokenId);
     }
@@ -106,7 +106,7 @@ contract BotCoreWrapper is IGetBot, ReentrancyGuard, Ownable, ERC721, ERC721Paus
     function unwrapMany(uint256[] calldata tokenIds) external nonReentrant {
         for (uint256 i; i < tokenIds.length; i++) {
             uint256 tokenId = tokenIds[i];
-            require(ownerOf(tokenId) == msg.sender, "NFTWrapper: unwrap from incorrect owner");
+            require(ownerOf(tokenId) == msg.sender, "Wrapper: unwrap from incorrect owner");
             _burn(tokenId);
             botCore.transfer(msg.sender, tokenId);
         }

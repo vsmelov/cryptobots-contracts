@@ -95,6 +95,26 @@ def test_unwrap(wrapper, botcore, admin, user0):
     assert botcore.ownerOf(bot_id) == user0
 
 
+def test_unwrap_fails(wrapper, botcore, admin, user0, user1):
+    coo = botcore.cooAddress()
+    tx = botcore.createPromoBot(0, user0, {"from": coo})
+    bot_id = tx.events['Birth']['botId']
+    botcore.approve(wrapper, bot_id, {"from": user0})
+    tx = wrapper.wrap(bot_id, {"from": user0})
+
+    assert tx.events['Transfer'][0]['from'] == user0
+    assert tx.events['Transfer'][0]['to'] == wrapper
+    assert tx.events['Transfer'][0]['tokenId'] == bot_id
+    assert tx.events['Transfer'][1]['from'] == ADDRESS_ZERO
+    assert tx.events['Transfer'][1]['to'] == user0
+    assert tx.events['Transfer'][1]['tokenId'] == bot_id
+    assert botcore.ownerOf(bot_id) == wrapper
+    assert wrapper.ownerOf(bot_id) == user0
+
+    with reverts('Wrapper: unwrap from incorrect owner'):
+        tx = wrapper.unwrap(bot_id, {"from": user1})
+
+
 def test_unwrap_many(wrapper, botcore, admin, user0):
     coo = botcore.cooAddress()
     tx = botcore.createPromoBot(0, user0, {"from": coo})
@@ -138,3 +158,33 @@ def test_unwrap_many(wrapper, botcore, admin, user0):
     assert tx.events['Transfer'][3]['to'] == user0
     assert tx.events['Transfer'][3]['tokenId'] == bot_id1
     assert botcore.ownerOf(bot_id1) == user0
+
+
+def test_unwrap_many_fails(wrapper, botcore, admin, user0, user1):
+    coo = botcore.cooAddress()
+    tx = botcore.createPromoBot(0, user0, {"from": coo})
+    bot_id0 = tx.events['Birth']['botId']
+
+    tx = botcore.createPromoBot(0, user0, {"from": coo})
+    bot_id1 = tx.events['Birth']['botId']
+
+    botcore.approve(wrapper, bot_id0, {"from": user0})
+    botcore.approve(wrapper, bot_id1, {"from": user0})
+    tx = wrapper.wrapMany([bot_id0, bot_id1], {"from": user0})
+
+    assert tx.events['Transfer'][0]['from'] == user0
+    assert tx.events['Transfer'][0]['to'] == wrapper
+    assert tx.events['Transfer'][0]['tokenId'] == bot_id0
+    assert tx.events['Transfer'][1]['from'] == ADDRESS_ZERO
+    assert tx.events['Transfer'][1]['to'] == user0
+    assert tx.events['Transfer'][1]['tokenId'] == bot_id0
+
+    assert tx.events['Transfer'][2]['from'] == user0
+    assert tx.events['Transfer'][2]['to'] == wrapper
+    assert tx.events['Transfer'][2]['tokenId'] == bot_id1
+    assert tx.events['Transfer'][3]['from'] == ADDRESS_ZERO
+    assert tx.events['Transfer'][3]['to'] == user0
+    assert tx.events['Transfer'][3]['tokenId'] == bot_id1
+
+    with reverts('Wrapper: unwrap from incorrect owner'):
+        tx = wrapper.unwrapMany([bot_id0, bot_id1], {"from": user1})
