@@ -21,3 +21,14 @@ beauty address
 https://github.com/ZeframLou/vested-erc20/blob/main/src/VestedERC20.sol
 
 https://eips.ethereum.org/EIPS/eip-1132
+
+
+## Test
+
+### Setup eth mainnet fork
+
+brownie console --network mainnet-fork
+
+### Run test
+
+brownie test -vvv --coverage -R
