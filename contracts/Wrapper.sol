@@ -46,7 +46,7 @@ contract BotCoreWrapper is IGetBot, ReentrancyGuard, Ownable, ERC721, ERC721Paus
     event BaseURISet(string value);
     event ContractURISet(string value);
 
-    constructor (address botCoreAddress, string memory baseURIValue, string memory contractURIValue) ERC721("WrappedCryptoBots", "WrappedCryptoBots") {
+    constructor (address botCoreAddress, string memory baseURIValue, string memory contractURIValue) ERC721("WrappedCryptoBots", "WCBT") {
         require(botCoreAddress != address(0), "zero address");
         botCore = IBotCore(botCoreAddress);
         baseURI = baseURIValue;
@@ -68,6 +68,38 @@ contract BotCoreWrapper is IGetBot, ReentrancyGuard, Ownable, ERC721, ERC721Paus
         uint256 _tokenId
     ) external override {
         transferFrom(msg.sender, _to, _tokenId);
+    }
+
+    function transferMany(
+        address[] calldata _tos,
+        uint256[] calldata _tokenIds
+    ) external {
+        require(_tos.length == _tokenIds.length, "Wrapper: lengths mismatch");
+        for (uint256 i; i < _tos.length; i++){
+            transferFrom(msg.sender, _tos[i], _tokenIds[i]);
+        }
+    }
+
+    function transferFromMany(
+        address[] calldata _froms,
+        address[] calldata _tos,
+        uint256[] calldata _tokenIds
+    ) external {
+        require(_froms.length == _tos.length, "Wrapper: lengths mismatch");
+        require(_tos.length == _tokenIds.length, "Wrapper: lengths mismatch");
+        for (uint256 i; i < _froms.length; i++){
+            transferFrom(_froms[i], _tos[i], _tokenIds[i]);
+        }
+    }
+
+    function approveMany(
+        address[] calldata _tos,
+        uint256[] calldata _tokenIds
+    ) external {
+        require(_tos.length == _tokenIds.length, "Wrapper: lengths mismatch");
+        for (uint256 i; i < _tos.length; i++){
+            approve(_tos[i], _tokenIds[i]);
+        }
     }
 
     function setBaseURI(string calldata baseURIValue) external onlyOwner {
