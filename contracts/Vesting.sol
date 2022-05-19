@@ -15,22 +15,29 @@ contract Vesting is Ownable {
     using SafeERC20 for IERC20;
     using PercentageVestingLibrary for PercentageVestingLibrary.Data;
 
+    struct VestingPool {
+        PercentageVestingLibrary.Data data;
+        uint256 totalAmount;
+        uint256 allocatedAmount;
+        uint256[] userVestingIds;
+    }
+
     struct UserVesting {
         address receiver;
         uint256 totalAmount;
         uint256 withdrawnAmount;
-        uint256 vestingParamsId;
+        uint256 vestingPoolId;
     }
 
     IERC20 public coin;
     uint256 public totalUserVestingsCount;
-    uint256 public totalVestingParamsCount;
-    mapping (address => uint256[]) public userVestingIds;
-    mapping (uint256 /*lockId*/ => UserVesting) public userVestings;
-    mapping (uint256 /*vestingId*/ => PercentageVestingLibrary.Data) public vestingParams;
+    uint256 public totalVestingPoolsCount;
+    mapping (address /* user wallet */ => uint256[] /* list of vesting ids */) public userVestingIds;
+    mapping (uint256 /* userVestingId */ => UserVesting) public userVestings;
+    mapping (uint256 /* vestingPoolId */ => VestingPool) public vestingPools;
 
-    event VestingParamsCreated(
-        uint256 indexed vestingParamsId
+    event VestingPoolCreated(
+        uint256 indexed vestingPoolId
     );
     event UserVestingCreated (
         uint256 indexed userVestingId
@@ -54,21 +61,43 @@ contract Vesting is Ownable {
         coin = IERC20(coinAddress);
     }
 
-    function getVestingParams(uint256 vestingParamsId) external view returns(
+    function getVestingPool(uint256 vestingPoolId) external view returns(
+        uint16 tgePercentage,
+        uint32 tge,
+        uint32 cliffDuration,
+        uint32 vestingDuration,
+        uint32 vestingInterval,
+        uint256 totalAmount,
+        uint256 allocatedAmount,
+        uint256[] memory userVestingIds
+    ) {
+        (
+            tgePercentage,
+            tge,
+            cliffDuration,
+            vestingDuration,
+            vestingInterval
+        ) = vestingPools[vestingPoolId].data.vestingDetails();
+        totalAmount = vestingPools[vestingPoolId].totalAmount;
+        allocatedAmount = vestingPools[vestingPoolId].allocatedAmount;
+        userVestingIds = vestingPools[vestingPoolId].userVestingIds;
+    }
+
+    function getVestingParams(uint256 vestingPoolId) external view returns(
         uint16 tgePercentage,
         uint32 tge,
         uint32 cliffDuration,
         uint32 vestingDuration,
         uint32 vestingInterval
     ) {
-        return vestingParams[vestingParamsId].vestingDetails();
+        return vestingPools[vestingPoolId].data.vestingDetails();
     }
 
     function getUserVesting(uint256 userVestingId) public view returns(
         address receiver,
         uint256 totalAmount,
         uint256 withdrawnAmount,
-        uint256 vestingParamsId,
+        uint256 vestingPoolId,
         uint256 avaliable
     ) {
         UserVesting storage o = userVestings[userVestingId];
@@ -77,8 +106,8 @@ contract Vesting is Ownable {
         receiver = o.receiver;
         totalAmount = o.totalAmount;
         withdrawnAmount = o.withdrawnAmount;
-        vestingParamsId = o.vestingParamsId;
-        avaliable = vestingParams[o.vestingParamsId].availableOutputAmount({
+        vestingPoolId = o.vestingPoolId;
+        avaliable = vestingPools[o.vestingPoolId].data.availableOutputAmount({
             totalAmount: o.totalAmount,
             withdrawnAmount: o.withdrawnAmount
         });
@@ -89,6 +118,10 @@ contract Vesting is Ownable {
         uint256 alreadyWithdrawn,
         uint256 availableToWithdraw
     ) {
+        totalAmount = 0;
+        alreadyWithdrawn = 0;
+        availableToWithdraw = 0;
+
         uint256 totalVestingsCount = userVestingIds[wallet].length;
         for (uint256 i; i < totalVestingsCount; i++) {
             uint256 userVestingId = userVestingIds[wallet][i];
@@ -105,41 +138,74 @@ contract Vesting is Ownable {
         }
     }
 
-    function createVestingParams(
+    function createVestingPools(
+        uint16[] tgePercentage,
+        uint32[] tge,
+        uint32[] cliffDuration,
+        uint32[] vestingDuration,
+        uint32[] vestingInterval,
+        uint256[] totalAmount
+    ) external onlyOwner {
+        uint256 length = tgePercentage.length;
+        require(tge.length == length, "length mismatch");
+        require(cliffDuration.length == length, "length mismatch");
+        require(vestingDuration.length == length, "length mismatch");
+        require(vestingInterval.length == length, "length mismatch");
+        require(totalAmount.length == length, "length mismatch");
+        for (uint256 i=0; i < length; i++) {
+            createVestingPool({
+                tgePercentage: tgePercentage[i],
+                tge: tge[i],
+                cliffDuration: cliffDuration[i],
+                vestingDuration: vestingDuration[i],
+                vestingInterval: vestingInterval[i],
+                totalAmount: totalAmount[i]
+            });
+        }
+    }
+
+    function createVestingPool(
         uint16 tgePercentage,
         uint32 tge,
         uint32 cliffDuration,
         uint32 vestingDuration,
-        uint32 vestingInterval
-    ) external onlyOwner {
-        uint256 vestingParamsId = totalVestingParamsCount++;
-        vestingParams[vestingParamsId].initialize({
+        uint32 vestingInterval,
+        uint256 totalAmount
+    ) public onlyOwner {
+        uint256 vestingPoolId = totalVestingPoolsCount++;
+        vestingPools[vestingPoolId].data.initialize({
             tgePercentage: tgePercentage,
             tge: tge,
             cliffDuration: cliffDuration,
             vestingDuration: vestingDuration,
             vestingInterval: vestingInterval
         });
-        emit VestingParamsCreated({
-            vestingParamsId: vestingParamsId
+        vestingPools[vestingPoolId].totalAmount = totalAmount;
+        coin.safeTransferFrom(msg.sender, address(this), totalAmount);
+        emit VestingPoolCreated({
+            vestingPoolId: vestingPoolId
         });
     }
 
     function createUserVesting(
         address receiver,
         uint256 totalAmount,
-        uint256 vestingParamsId
+        uint256 vestingPoolId
     ) external onlyOwner {
         require(receiver != address(0), "ZERO_ADDRESS");
         require(totalAmount > 0, "ZERO_AMOUNT");
-        require(vestingParams[vestingParamsId].tge > 0, "VESTING_PARAMS_NOT_EXISTS");
+        VestingPool storage vestingPool = vestingPools[vestingPoolId];
+
+        vestingPool.allocatedAmount += totalAmount;
+        require(vestingPool.allocatedAmount <= vestingPool.totalAmount, "too much allocated");
+
+        require(vestingPool.data.tge > 0, "VESTING_PARAMS_NOT_EXISTS");
         uint256 userVestingId = totalUserVestingsCount++;
-        coin.safeTransferFrom(msg.sender, address(this), totalAmount);
         userVestings[userVestingId] = UserVesting({
             receiver: receiver,
             totalAmount: totalAmount,
             withdrawnAmount: 0,
-            vestingParamsId: vestingParamsId
+            vestingPoolId: vestingPoolId
         });
         userVestingIds[receiver].push(userVestingId);
         emit UserVestingCreated({
@@ -150,7 +216,7 @@ contract Vesting is Ownable {
     function withdraw(uint256 userVestingId) public {
         UserVesting memory userVesting = userVestings[userVestingId];
         require(userVesting.receiver == msg.sender, "NOT_RECEIVER");
-        uint256 amountToWithdraw = vestingParams[userVesting.vestingParamsId].availableOutputAmount({
+        uint256 amountToWithdraw = vestingPools[userVesting.vestingPoolId].data.availableOutputAmount({
             totalAmount: userVesting.totalAmount,
             withdrawnAmount: userVesting.withdrawnAmount
         });
@@ -170,7 +236,7 @@ contract Vesting is Ownable {
         for (uint256 i; i < totalVestingsCount; i++) {
             uint256 userVestingId = userVestingIds[msg.sender][i];
             UserVesting storage userVesting = userVestings[userVestingId];
-            uint256 amountToWithdraw = vestingParams[userVesting.vestingParamsId].availableOutputAmount({
+            uint256 amountToWithdraw = vestingPools[userVesting.vestingPoolId].data.availableOutputAmount({
                 totalAmount: userVesting.totalAmount,
                 withdrawnAmount: userVesting.withdrawnAmount
             });

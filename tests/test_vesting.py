@@ -14,22 +14,26 @@ def test_create_vesting_params(admin, bits, vesting, chain):
     cliffDuration = 30 * 24 * 3600  # 30 days
     vestingDuration = 6 * 30 * 24 * 3600
     vestingInterval = 1
-    tx = vesting.createVestingParams(
+    tx = vesting.createVestingPool(
         tgePercentage,
         tge,
         cliffDuration,
         vestingDuration,
         vestingInterval,
+        0,
         {"from": admin}
     )
-    vestingParamsId = tx.events['VestingParamsCreated']['vestingParamsId']
-    assert vestingParamsId == 0
-    assert vesting.getVestingParams(vestingParamsId) == (
+    vestingPoolId = tx.events['VestingPoolCreated']['vestingPoolId']
+    assert vestingPoolId == 0
+    assert vesting.getVestingPool(vestingPoolId) == (
         tgePercentage,
         tge,
         cliffDuration,
         vestingDuration,
-        vestingInterval
+        vestingInterval,
+        0,
+        0,
+        [],
     )
 
 
@@ -40,12 +44,13 @@ def test_create_vesting_params2(admin, bits, vesting, chain):
     vestingDuration = 0
     vestingInterval = 1
     with reverts('PercentageVestingLibrary: VESTING'):
-        tx = vesting.createVestingParams(
+        tx = vesting.createVestingPool(
             tgePercentage,
             tge,
             cliffDuration,
             vestingDuration,
             vestingInterval,
+            0,
             {"from": admin}
         )
 
@@ -57,12 +62,13 @@ def test_create_vesting_params3(admin, bits, vesting, chain):
     vestingDuration = 1
     vestingInterval = 0
     with reverts('PercentageVestingLibrary: VESTING'):
-        tx = vesting.createVestingParams(
+        tx = vesting.createVestingPool(
             tgePercentage,
             tge,
             cliffDuration,
             vestingDuration,
             vestingInterval,
+            0,
             {"from": admin}
         )
 
@@ -74,12 +80,13 @@ def test_create_vesting_params4(admin, bits, vesting, chain):
     vestingDuration = 0
     vestingInterval = 0
     with reverts('PercentageVestingLibrary: CLIFF'):
-        tx = vesting.createVestingParams(
+        tx = vesting.createVestingPool(
             tgePercentage,
             tge,
             cliffDuration,
             vestingDuration,
             vestingInterval,
+            0,
             {"from": admin}
         )
 
@@ -91,12 +98,13 @@ def test_create_vesting_params5(admin, bits, vesting, chain):
     vestingDuration = 1
     vestingInterval = 0
     with reverts('PercentageVestingLibrary: VESTING'):
-        tx = vesting.createVestingParams(
+        tx = vesting.createVestingPool(
             tgePercentage,
             tge,
             cliffDuration,
             vestingDuration,
             vestingInterval,
+            0,
             {"from": admin}
         )
 
@@ -107,12 +115,13 @@ def test_create_vesting_params6(admin, bits, vesting, chain):
     cliffDuration = 30 * 24 * 3600  # 30 days
     vestingDuration = 0
     vestingInterval = 0
-    tx = vesting.createVestingParams(
+    tx = vesting.createVestingPool(
         tgePercentage,
         tge,
         cliffDuration,
         vestingDuration,
         vestingInterval,
+        0,
         {"from": admin}
     )
 
@@ -124,12 +133,13 @@ def test_create_vesting_params7(admin, bits, vesting, chain):
     vestingDuration = 1
     vestingInterval = 10
     with reverts('PercentageVestingLibrary: VESTING'):
-        tx = vesting.createVestingParams(
+        tx = vesting.createVestingPool(
             tgePercentage,
             tge,
             cliffDuration,
             vestingDuration,
             vestingInterval,
+            0,
             {"from": admin}
         )
 
@@ -141,12 +151,13 @@ def test_create_vesting_params8(admin, bits, vesting, chain):
     vestingDuration = 0
     vestingInterval = 2
     with reverts('PercentageVestingLibrary: VESTING'):
-        tx = vesting.createVestingParams(
+        tx = vesting.createVestingPool(
             tgePercentage,
             tge,
             cliffDuration,
             vestingDuration,
             vestingInterval,
+            0,
             {"from": admin}
         )
 
@@ -158,12 +169,13 @@ def test_create_vesting_params_zero_tge(admin, bits, vesting, chain):
     vestingDuration = 0
     vestingInterval = 1
     with reverts('PercentageVestingLibrary: zero tge'):
-        tx = vesting.createVestingParams(
+        tx = vesting.createVestingPool(
             tgePercentage,
             tge,
             cliffDuration,
             vestingDuration,
             vestingInterval,
+            0,
             {"from": admin}
         )
 
@@ -175,12 +187,13 @@ def test_create_vesting_cliff(admin, bits, vesting, chain):
     vestingDuration = 6 * 30 * 24 * 3600
     vestingInterval = 1
     with reverts('PercentageVestingLibrary: CLIFF'):
-        tx = vesting.createVestingParams(
+        tx = vesting.createVestingPool(
             tgePercentage,
             tge,
             cliffDuration,
             vestingDuration,
             vestingInterval,
+            0,
             {"from": admin}
         )
 
@@ -192,12 +205,13 @@ def test_create_vesting_cliff2(admin, bits, vesting, chain):
     vestingDuration = 0
     vestingInterval = 0
     with reverts('PercentageVestingLibrary: CLIFF'):
-        tx = vesting.createVestingParams(
+        tx = vesting.createVestingPool(
             tgePercentage,
             tge,
             cliffDuration,
             vestingDuration,
             vestingInterval,
+            0,
             {"from": admin}
         )
 
@@ -209,12 +223,13 @@ def test_create_vesting_cliff3(admin, bits, vesting, chain):
     vestingDuration = 12
     vestingInterval = 0
     with reverts('PercentageVestingLibrary: CLIFF'):
-        tx = vesting.createVestingParams(
+        tx = vesting.createVestingPool(
             tgePercentage,
             tge,
             cliffDuration,
             vestingDuration,
             vestingInterval,
+            0,
             {"from": admin}
         )
 
@@ -225,24 +240,24 @@ def test_create_user_vesting(admin, bits, vesting, chain, user0, user1):
     cliffDuration = 30 * 24 * 3600  # 30 days
     vestingDuration = 6 * 30 * 24 * 3600
     vestingInterval = 1
-    tx = vesting.createVestingParams(
+    amountTotal = 10 * 10 ** 18
+    bits.approve(vesting, amountTotal, {"from": admin})
+    tx = vesting.createVestingPool(
         tgePercentage,
         tge,
         cliffDuration,
         vestingDuration,
         vestingInterval,
+        amountTotal,
         {"from": admin}
     )
-    vestingParamsId = tx.events['VestingParamsCreated']['vestingParamsId']
+    vestingPoolId = tx.events['VestingPoolCreated']['vestingPoolId']
     receiver = user1
-    amountTotal = 10 * 10 ** 18
 
-    bits.transfer(user0, amountTotal, {"from": admin})
-    bits.approve(vesting, amountTotal, {"from": admin})
     tx = vesting.createUserVesting(
         receiver,
         amountTotal,
-        vestingParamsId,
+        vestingPoolId,
         {"from": admin}
     )
     userVestingId = tx.events['UserVestingCreated']['userVestingId']
@@ -252,7 +267,7 @@ def test_create_user_vesting(admin, bits, vesting, chain, user0, user1):
         receiver,
         amountTotal,
         0,  # amountWithdrawn
-        vestingParamsId,
+        vestingPoolId,
         0  # avaliable
     )
 
@@ -263,25 +278,25 @@ def test_create_user_vesting_zero_amount(admin, bits, vesting, chain, user0, use
     cliffDuration = 30 * 24 * 3600  # 30 days
     vestingDuration = 6 * 30 * 24 * 3600
     vestingInterval = 1
-    tx = vesting.createVestingParams(
+    tx = vesting.createVestingPool(
         tgePercentage,
         tge,
         cliffDuration,
         vestingDuration,
         vestingInterval,
+        0,
         {"from": admin}
     )
-    vestingParamsId = tx.events['VestingParamsCreated']['vestingParamsId']
+    vestingPoolId = tx.events['VestingPoolCreated']['vestingPoolId']
     receiver = user1
     amountTotal = 0
 
-    bits.transfer(user0, amountTotal, {"from": admin})
     bits.approve(vesting, amountTotal, {"from": admin})
     with reverts("ZERO_AMOUNT"):
         tx = vesting.createUserVesting(
             receiver,
             amountTotal,
-            vestingParamsId,
+            vestingPoolId,
             {"from": admin}
         )
 
@@ -292,25 +307,26 @@ def test_create_user_vesting_zero_address(admin, bits, vesting, chain, user0, us
     cliffDuration = 30 * 24 * 3600  # 30 days
     vestingDuration = 6 * 30 * 24 * 3600
     vestingInterval = 1
-    tx = vesting.createVestingParams(
+    tx = vesting.createVestingPool(
         tgePercentage,
         tge,
         cliffDuration,
         vestingDuration,
         vestingInterval,
+        0,
         {"from": admin}
     )
-    vestingParamsId = tx.events['VestingParamsCreated']['vestingParamsId']
+    vestingPoolId = tx.events['VestingPoolCreated']['vestingPoolId']
     receiver = '0x0000000000000000000000000000000000000000'
     amountTotal = 0
 
-    bits.transfer(user0, amountTotal, {"from": admin})
+    
     bits.approve(vesting, amountTotal, {"from": admin})
     with reverts("ZERO_ADDRESS"):
         tx = vesting.createUserVesting(
             receiver,
             amountTotal,
-            vestingParamsId,
+            vestingPoolId,
             {"from": admin}
         )
 
@@ -321,25 +337,24 @@ def test_withdraw_not_receiver(admin, bits, vesting, chain, user0, user1, user2)
     cliffDuration = 30 * 24 * 3600  # 30 days
     vestingDuration = 6 * 30 * 24 * 3600
     vestingInterval = 1  # 1 sec
-    tx = vesting.createVestingParams(
+    amountTotal = 10 * 10 ** 18
+    bits.approve(vesting, amountTotal, {"from": admin})
+    tx = vesting.createVestingPool(
         tgePercentage,
         tge,
         cliffDuration,
         vestingDuration,
         vestingInterval,
+        amountTotal,
         {"from": admin}
     )
-    vestingParamsId = tx.events['VestingParamsCreated']['vestingParamsId']
+    vestingPoolId = tx.events['VestingPoolCreated']['vestingPoolId']
     receiver = user1
-    amountTotal = 10 * 10 ** 18
-    amountVesting = amountTotal - int(amountTotal * tgePercentage / 10000)
 
-    bits.transfer(user0, amountTotal, {"from": admin})
-    bits.approve(vesting, amountTotal, {"from": admin})
     tx = vesting.createUserVesting(
         receiver,
         amountTotal,
-        vestingParamsId,
+        vestingPoolId,
         {"from": admin}
     )
     userVestingId = tx.events['UserVestingCreated']['userVestingId']
@@ -348,7 +363,7 @@ def test_withdraw_not_receiver(admin, bits, vesting, chain, user0, user1, user2)
         receiver,
         amountTotal,
         0,  # amountWithdrawn
-        vestingParamsId,
+        vestingPoolId,
         0  # avaliable
     )
 
@@ -362,25 +377,25 @@ def test_withdraw_user_vesting(admin, bits, vesting, chain, user0, user1):
     cliffDuration = 30 * 24 * 3600  # 30 days
     vestingDuration = 6 * 30 * 24 * 3600
     vestingInterval = 1  # 1 sec
-    tx = vesting.createVestingParams(
+    amountTotal = 10 * 10 ** 18
+    bits.approve(vesting, amountTotal, {"from": admin})
+    tx = vesting.createVestingPool(
         tgePercentage,
         tge,
         cliffDuration,
         vestingDuration,
         vestingInterval,
+        amountTotal,
         {"from": admin}
     )
-    vestingParamsId = tx.events['VestingParamsCreated']['vestingParamsId']
+    vestingPoolId = tx.events['VestingPoolCreated']['vestingPoolId']
     receiver = user1
-    amountTotal = 10 * 10 ** 18
     amountVesting = amountTotal - int(amountTotal * tgePercentage / 10000)
 
-    bits.transfer(user0, amountTotal, {"from": admin})
-    bits.approve(vesting, amountTotal, {"from": admin})
     tx = vesting.createUserVesting(
         receiver,
         amountTotal,
-        vestingParamsId,
+        vestingPoolId,
         {"from": admin}
     )
     userVestingId = tx.events['UserVestingCreated']['userVestingId']
@@ -389,7 +404,7 @@ def test_withdraw_user_vesting(admin, bits, vesting, chain, user0, user1):
         receiver,
         amountTotal,
         0,  # amountWithdrawn
-        vestingParamsId,
+        vestingPoolId,
         0  # avaliable
     )
 
@@ -445,25 +460,26 @@ def test_withdraw_user_vesting_daily_intervals(admin, bits, vesting, chain, user
     cliffDuration = 30 * 24 * 3600  # 30 days
     vestingDuration = 6 * 30 * 24 * 3600  # ~6 months
     vestingInterval = 24 * 3600  # 1 day
-    tx = vesting.createVestingParams(
+    amountTotal = 10 * 10 ** 18
+    bits.approve(vesting, amountTotal, {"from": admin})
+    tx = vesting.createVestingPool(
         tgePercentage,
         tge,
         cliffDuration,
         vestingDuration,
         vestingInterval,
+        amountTotal,
         {"from": admin}
     )
-    vestingParamsId = tx.events['VestingParamsCreated']['vestingParamsId']
+    vestingPoolId = tx.events['VestingPoolCreated']['vestingPoolId']
     receiver = user1
-    amountTotal = 10 * 10 ** 18
     amountVesting = amountTotal - int(amountTotal * tgePercentage / 10000)
 
-    bits.transfer(user0, amountTotal, {"from": admin})
-    bits.approve(vesting, amountTotal, {"from": admin})
+    
     tx = vesting.createUserVesting(
         receiver,
         amountTotal,
-        vestingParamsId,
+        vestingPoolId,
         {"from": admin}
     )
     userVestingId = tx.events['UserVestingCreated']['userVestingId']
@@ -473,7 +489,7 @@ def test_withdraw_user_vesting_daily_intervals(admin, bits, vesting, chain, user
         receiver,  # receiver
         amountTotal,  # amountTotal
         0,  # amountWithdrawn
-        vestingParamsId,  # vestingParamsId
+        vestingPoolId,  # vestingPoolId
         0  # available
     )
 
@@ -496,7 +512,7 @@ def test_withdraw_user_vesting_daily_intervals(admin, bits, vesting, chain, user
         receiver,  # receiver
         amountTotal,  # amountTotal
         0,  # amountWithdrawn
-        vestingParamsId,  # vestingParamsId
+        vestingPoolId,  # vestingPoolId
         int(tgePercentage * amountTotal // 10_000),  # available
     )
     assert vesting.getWalletInfo(receiver) == (
@@ -514,7 +530,7 @@ def test_withdraw_user_vesting_daily_intervals(admin, bits, vesting, chain, user
         receiver,  # receiver
         amountTotal,  # amountTotal
         int(tgePercentage * amountTotal // 10_000),  # amountWithdrawn
-        vestingParamsId,  # vestingParamsId
+        vestingPoolId,  # vestingPoolId
         0,  # available
     )
 
@@ -556,7 +572,7 @@ def test_withdraw_user_vesting_daily_intervals(admin, bits, vesting, chain, user
         amountTotal,  # amountTotal
         int(tgePercentage * amountTotal // 10_000) + amountVesting * vestingInterval // vestingDuration,
         # amountWithdrawn
-        vestingParamsId,  # vestingParamsId
+        vestingPoolId,  # vestingPoolId
         0,  # available
     )
 
@@ -576,7 +592,7 @@ def test_withdraw_user_vesting_daily_intervals(admin, bits, vesting, chain, user
         amountTotal,  # amountTotal
         int(tgePercentage * amountTotal // 10_000) + 3 * amountVesting * vestingInterval // vestingDuration,
         # amountWithdrawn
-        vestingParamsId,  # vestingParamsId
+        vestingPoolId,  # vestingPoolId
         0,  # available
     )
 
@@ -588,7 +604,7 @@ def test_withdraw_user_vesting_daily_intervals(admin, bits, vesting, chain, user
         amountTotal,  # amountTotal
         int(tgePercentage * amountTotal // 10_000) + 3 * amountVesting * vestingInterval // vestingDuration,
         # amountWithdrawn
-        vestingParamsId,  # vestingParamsId
+        vestingPoolId,  # vestingPoolId
         0,  # available
     )
 
@@ -603,7 +619,7 @@ def test_withdraw_user_vesting_daily_intervals(admin, bits, vesting, chain, user
         receiver,  # receiver
         amountTotal,  # amountTotal
         amountWithdrawn,  # amountWithdrawn
-        vestingParamsId,  # vestingParamsId
+        vestingPoolId,  # vestingPoolId
         0,  # available
     )
     assert amountWithdrawn == amountTotal
@@ -615,25 +631,24 @@ def test_withdrawAll(admin, bits, vesting, chain, user0, user1, user2):
     cliffDuration = 30 * 24 * 3600  # 30 days
     vestingDuration = 6 * 30 * 24 * 3600  # ~6 months
     vestingInterval = 24 * 3600  # 1 day
-    tx = vesting.createVestingParams(
+    amountTotal = 10 * 10 ** 18
+    bits.approve(vesting, amountTotal, {"from": admin})
+    tx = vesting.createVestingPool(
         tgePercentage,
         tge,
         cliffDuration,
         vestingDuration,
         vestingInterval,
+        amountTotal,
         {"from": admin}
     )
-    vestingParamsId = tx.events['VestingParamsCreated']['vestingParamsId']
+    vestingPoolId = tx.events['VestingPoolCreated']['vestingPoolId']
     receiver = user1
-    amountTotal = 10 * 10 ** 18
-    amountVesting = amountTotal - int(amountTotal * tgePercentage / 10000)
 
-    bits.transfer(user0, amountTotal, {"from": admin})
-    bits.approve(vesting, amountTotal, {"from": admin})
     tx = vesting.createUserVesting(
         receiver,
         amountTotal,
-        vestingParamsId,
+        vestingPoolId,
         {"from": admin}
     )
     userVestingId = tx.events['UserVestingCreated']['userVestingId']
@@ -643,7 +658,7 @@ def test_withdrawAll(admin, bits, vesting, chain, user0, user1, user2):
         receiver,  # receiver
         amountTotal,  # amountTotal
         0,  # amountWithdrawn
-        vestingParamsId,  # vestingParamsId
+        vestingPoolId,  # vestingPoolId
         0  # available
     )
 
@@ -652,7 +667,7 @@ def test_withdrawAll(admin, bits, vesting, chain, user0, user1, user2):
         receiver,  # receiver
         amountTotal,  # amountTotal
         0,  # amountWithdrawn
-        vestingParamsId,  # vestingParamsId
+        vestingPoolId,  # vestingPoolId
         0,  # available
     )
 
@@ -663,25 +678,23 @@ def test_withdrawAll_2(admin, bits, vesting, chain, user0, user1, user2):
     cliffDuration = 30 * 24 * 3600  # 30 days
     vestingDuration = 6 * 30 * 24 * 3600  # ~6 months
     vestingInterval = 24 * 3600  # 1 day
-    tx = vesting.createVestingParams(
+    amountTotal = 10 * 10 ** 18
+    bits.approve(vesting, amountTotal, {"from": admin})
+    tx = vesting.createVestingPool(
         tgePercentage,
         tge,
         cliffDuration,
         vestingDuration,
         vestingInterval,
+        amountTotal,
         {"from": admin}
     )
-    vestingParamsId = tx.events['VestingParamsCreated']['vestingParamsId']
+    vestingPoolId = tx.events['VestingPoolCreated']['vestingPoolId']
     receiver = user1
-    amountTotal = 10 * 10 ** 18
-    amountVesting = amountTotal - int(amountTotal * tgePercentage / 10000)
-
-    bits.transfer(user0, amountTotal, {"from": admin})
-    bits.approve(vesting, amountTotal, {"from": admin})
     tx = vesting.createUserVesting(
         receiver,
         amountTotal,
-        vestingParamsId,
+        vestingPoolId,
         {"from": admin}
     )
     userVestingId = tx.events['UserVestingCreated']['userVestingId']
@@ -691,7 +704,7 @@ def test_withdrawAll_2(admin, bits, vesting, chain, user0, user1, user2):
         receiver,  # receiver
         amountTotal,  # amountTotal
         0,  # amountWithdrawn
-        vestingParamsId,  # vestingParamsId
+        vestingPoolId,  # vestingPoolId
         0  # available
     )
 
@@ -714,7 +727,7 @@ def test_withdrawAll_2(admin, bits, vesting, chain, user0, user1, user2):
         receiver,  # receiver
         amountTotal,  # amountTotal
         0,  # amountWithdrawn
-        vestingParamsId,  # vestingParamsId
+        vestingPoolId,  # vestingPoolId
         int(tgePercentage * amountTotal // 10_000),  # available
     )
 
@@ -723,7 +736,7 @@ def test_withdrawAll_2(admin, bits, vesting, chain, user0, user1, user2):
         receiver,  # receiver
         amountTotal,  # amountTotal
         int(tgePercentage * amountTotal // 10_000),  # amountWithdrawn
-        vestingParamsId,  # vestingParamsId
+        vestingPoolId,  # vestingPoolId
         0,  # available
     )
 
@@ -734,25 +747,25 @@ def test_withdraw_user_vesting_1sec(admin, bits, vesting, chain, user0, user1):
     cliffDuration = 30 * 24 * 3600  # 30 days
     vestingDuration = 100  # for easy calculations
     vestingInterval = 1  # 1 sec
-    tx = vesting.createVestingParams(
+    amountTotal = 10 * 10 ** 18
+    bits.approve(vesting, amountTotal, {"from": admin})
+    tx = vesting.createVestingPool(
         tgePercentage,
         tge,
         cliffDuration,
         vestingDuration,
         vestingInterval,
+        amountTotal,
         {"from": admin}
     )
-    vestingParamsId = tx.events['VestingParamsCreated']['vestingParamsId']
+    vestingPoolId = tx.events['VestingPoolCreated']['vestingPoolId']
     receiver = user1
-    amountTotal = 10 * 10 ** 18
     amountVesting = amountTotal - int(amountTotal * tgePercentage / 10000)
 
-    bits.transfer(user0, amountTotal, {"from": admin})
-    bits.approve(vesting, amountTotal, {"from": admin})
     tx = vesting.createUserVesting(
         receiver,
         amountTotal,
-        vestingParamsId,
+        vestingPoolId,
         {"from": admin}
     )
     userVestingId = tx.events['UserVestingCreated']['userVestingId']
@@ -761,7 +774,7 @@ def test_withdraw_user_vesting_1sec(admin, bits, vesting, chain, user0, user1):
         receiver,
         amountTotal,
         0,  # amountWithdrawn
-        vestingParamsId,
+        vestingPoolId,
         0  # avaliable
     )
 
@@ -829,7 +842,7 @@ def test_withdraw_user_vesting_1sec(admin, bits, vesting, chain, user0, user1):
         receiver,  # receiver
         amountTotal,  # amountTotal
         amountWithdrawn,  # amountWithdrawn
-        vestingParamsId,  # vestingParamsId
+        vestingPoolId,  # vestingPoolId
         0,  # available
     )
     assert amountWithdrawn == amountTotal
@@ -841,34 +854,34 @@ def test_withdraw_user_vesting_daily_intervals_withdrawAll_for2vestings(admin, b
     cliffDuration = 30 * 24 * 3600  # 30 days
     vestingDuration = 6 * 30 * 24 * 3600  # ~6 months
     vestingInterval = 24 * 3600  # 1 day
-    tx = vesting.createVestingParams(
+    amountTotal = 10 * 10 ** 18
+    bits.approve(vesting, amountTotal*2, {"from": admin})
+    tx = vesting.createVestingPool(
         tgePercentage,
         tge,
         cliffDuration,
         vestingDuration,
         vestingInterval,
+        amountTotal*2,
         {"from": admin}
     )
-    vestingParamsId = tx.events['VestingParamsCreated']['vestingParamsId']
+    vestingPoolId = tx.events['VestingPoolCreated']['vestingPoolId']
     receiver = user1
-    amountTotal = 10 * 10 ** 18
     amountVesting = amountTotal - int(amountTotal * tgePercentage / 10000)
 
-    bits.approve(vesting, amountTotal, {"from": admin})
     tx = vesting.createUserVesting(
         receiver,
         amountTotal,
-        vestingParamsId,
+        vestingPoolId,
         {"from": admin}
     )
     userVestingId = tx.events['UserVestingCreated']['userVestingId']
     assert userVestingId == 0
 
-    bits.approve(vesting, amountTotal, {"from": admin})
     tx = vesting.createUserVesting(
         receiver,
         amountTotal,
-        vestingParamsId,
+        vestingPoolId,
         {"from": admin}
     )
     userVestingId = tx.events['UserVestingCreated']['userVestingId']
@@ -893,33 +906,37 @@ def test_create_team_vesting_withdrawAll(admin, bits, vesting, chain, user0):
     cliffDuration1 = 0
     vestingDuration1 = 365 * 24 * 3600
     vestingInterval1 = 30 * 24 * 3600
-    tx1 = vesting.createVestingParams(
+    totalAmount1 = 300_000 * 12 * 10 ** 18
+    bits.approve(vesting, totalAmount1, {"from": admin})
+    tx1 = vesting.createVestingPool(
         tgePercentage1,
         tge1,
         cliffDuration1,
         vestingDuration1,
         vestingInterval1,
+        totalAmount1,
         {"from": admin}
     )
-    params1 = tx1.events['VestingParamsCreated']['vestingParamsId']
+    params1 = tx1.events['VestingPoolCreated']['vestingPoolId']
 
     tge2 = tge1 + 365 * 24 * 3600
     tgePercentage2 = 0
     cliffDuration2 = 0
     vestingDuration2 = 365 * 24 * 3600
     vestingInterval2 = 30 * 24 * 3600
-    tx2 = vesting.createVestingParams(
+    totalAmount2 = 950_000 * 12 * 10 ** 18
+    bits.approve(vesting, totalAmount2, {"from": admin})
+    tx2 = vesting.createVestingPool(
         tgePercentage2,
         tge2,
         cliffDuration2,
         vestingDuration2,
         vestingInterval2,
+        totalAmount2,
         {"from": admin}
     )
-    params2 = tx2.events['VestingParamsCreated']['vestingParamsId']
+    params2 = tx2.events['VestingPoolCreated']['vestingPoolId']
 
-    totalAmount1 = 300_000 * 12 * 10 ** 18
-    bits.approve(vesting, totalAmount1, {"from": admin})
     tx = vesting.createUserVesting(
         receiver,
         totalAmount1,
@@ -928,8 +945,6 @@ def test_create_team_vesting_withdrawAll(admin, bits, vesting, chain, user0):
     )
     userVestingId1 = tx.events['UserVestingCreated']['userVestingId']
 
-    totalAmount2 = 950_000 * 12 * 10 ** 18
-    bits.approve(vesting, totalAmount2, {"from": admin})
     tx = vesting.createUserVesting(
         receiver,
         totalAmount2,
@@ -962,33 +977,37 @@ def test_create_team_vesting_withdrawStepByStep(admin, bits, vesting, chain, use
     cliffDuration1 = 0
     vestingDuration1 = 365 * 24 * 3600
     vestingInterval1 = 30 * 24 * 3600
-    tx1 = vesting.createVestingParams(
+    totalAmount1 = 300_000 * 12 * 10 ** 18
+    bits.approve(vesting, totalAmount1, {"from": admin})
+    tx1 = vesting.createVestingPool(
         tgePercentage1,
         tge1,
         cliffDuration1,
         vestingDuration1,
         vestingInterval1,
+        totalAmount1,
         {"from": admin}
     )
-    params1 = tx1.events['VestingParamsCreated']['vestingParamsId']
+    params1 = tx1.events['VestingPoolCreated']['vestingPoolId']
 
     tge2 = tge1 + 365 * 24 * 3600
     tgePercentage2 = 0
     cliffDuration2 = 0
     vestingDuration2 = 365 * 24 * 3600
     vestingInterval2 = 30 * 24 * 3600
-    tx2 = vesting.createVestingParams(
+    totalAmount2 = 950_000 * 12 * 10 ** 18
+    bits.approve(vesting, totalAmount2, {"from": admin})
+    tx2 = vesting.createVestingPool(
         tgePercentage2,
         tge2,
         cliffDuration2,
         vestingDuration2,
         vestingInterval2,
+        totalAmount2,
         {"from": admin}
     )
-    params2 = tx2.events['VestingParamsCreated']['vestingParamsId']
+    params2 = tx2.events['VestingPoolCreated']['vestingPoolId']
 
-    totalAmount1 = 300_000 * 12 * 10 ** 18
-    bits.approve(vesting, totalAmount1, {"from": admin})
     tx = vesting.createUserVesting(
         receiver,
         totalAmount1,
@@ -997,8 +1016,6 @@ def test_create_team_vesting_withdrawStepByStep(admin, bits, vesting, chain, use
     )
     userVestingId1 = tx.events['UserVestingCreated']['userVestingId']
 
-    totalAmount2 = 950_000 * 12 * 10 ** 18
-    bits.approve(vesting, totalAmount2, {"from": admin})
     tx = vesting.createUserVesting(
         receiver,
         totalAmount2,

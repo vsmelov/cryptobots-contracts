@@ -41,29 +41,24 @@ def main():
     month = 30 * 24 * 3600
     year = 365 * 24 * 3600
 
-    def create_vesting(lock, vestingPeriod, receiver, amount):
-        tx = vesting.createVestingParams(
+    def create_vesting(lock, vestingPeriod, amount):
+        bits.approve(vesting, amount, {"from": admin})
+        tx = vesting.createVestingPool(
             0,  # tgePercentage
             now + lock,  # tge
             0,  # cliffDuration
             vestingPeriod,  # vestingDuration
             1,  # vestingInterval
+            amount,
             {"from": admin}
         )
-        vestingParamsId = tx.events['vestingParamsId']
-        bits.approve(vesting, amount, {"from": admin})
-        vesting.createUserVesting(
-            receiver,  # receiver
-            amount,  # totalAmount
-            vestingParamsId,  # vestingParamsId
-            {"from": admin}
-        )
+        vestingPoolId = tx.events['VestingPoolCreated']
+        print(f'created {vestingPoolId=}')
 
     # EcosystemDAO
     create_vesting(
         lock=0,
         vestingPeriod=3 * 365 * 24 * 3600,
-        receiver=admin,  # todo
         amount=total_supply * 25 // 100,
     )
 
@@ -71,7 +66,6 @@ def main():
     create_vesting(
         lock=1 * year,
         vestingPeriod=2 * year,
-        receiver=admin,  # todo
         amount=total_supply * 10 // 100,
     )
 
@@ -79,7 +73,6 @@ def main():
     create_vesting(
         lock=1 * year,
         vestingPeriod=2 * year,
-        receiver=admin,  # todo
         amount=total_supply * 10 // 100,
     )
 
@@ -87,7 +80,6 @@ def main():
     create_vesting(
         lock=6 * month,
         vestingPeriod=6 * month,
-        receiver=admin,  # todo
         amount=total_supply * 5 // 100,
     )
 
@@ -95,7 +87,6 @@ def main():
     create_vesting(
         lock= 1 * year,
         vestingPeriod=2 * year,
-        receiver=admin,  # todo
         amount=total_supply * 15 // 100,
     )
 
@@ -103,6 +94,5 @@ def main():
     create_vesting(
         lock= 1 * year,
         vestingPeriod=2 * year,
-        receiver=admin,  # todo
         amount=total_supply * 15 // 100,
     )
