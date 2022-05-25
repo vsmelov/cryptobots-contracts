@@ -19,7 +19,6 @@ contract Vesting is Ownable {
         PercentageVestingLibrary.Data data;
         uint256 totalAmount;
         uint256 allocatedAmount;
-        uint256[] userVestingIds;
     }
 
     struct UserVesting {
@@ -27,6 +26,7 @@ contract Vesting is Ownable {
         uint256 totalAmount;
         uint256 withdrawnAmount;
         uint256 vestingPoolId;
+        bool cancelIsRestricted;
     }
 
     IERC20 public coin;
@@ -37,10 +37,24 @@ contract Vesting is Ownable {
     mapping (uint256 /* vestingPoolId */ => VestingPool) public vestingPools;
 
     event VestingPoolCreated(
-        uint256 indexed vestingPoolId
+        uint256 indexed vestingPoolId,
+        uint16 tgePercentage,
+        uint32 tge,
+        uint32 cliffDuration,
+        uint32 vestingDuration,
+        uint32 vestingInterval,
+        uint256 totalAmount
     );
     event UserVestingCreated (
-        uint256 indexed userVestingId
+        uint256 indexed userVestingId,
+        address receiver,
+        uint256 totalAmount,
+        uint256 vestingPoolId,
+        bool cancelIsRestricted
+    );
+    event UserVestingCanceled(
+        uint256 indexed userVestingId,
+        uint256 restAmount
     );
     event Withdrawn(
         uint256 indexed userVestingId,
@@ -68,8 +82,7 @@ contract Vesting is Ownable {
         uint32 vestingDuration,
         uint32 vestingInterval,
         uint256 totalAmount,
-        uint256 allocatedAmount,
-        uint256[] memory userVestingIds
+        uint256 allocatedAmount
     ) {
         (
             tgePercentage,
@@ -80,7 +93,6 @@ contract Vesting is Ownable {
         ) = vestingPools[vestingPoolId].data.vestingDetails();
         totalAmount = vestingPools[vestingPoolId].totalAmount;
         allocatedAmount = vestingPools[vestingPoolId].allocatedAmount;
-        userVestingIds = vestingPools[vestingPoolId].userVestingIds;
     }
 
     function getVestingParams(uint256 vestingPoolId) external view returns(
@@ -98,7 +110,8 @@ contract Vesting is Ownable {
         uint256 totalAmount,
         uint256 withdrawnAmount,
         uint256 vestingPoolId,
-        uint256 avaliable
+        uint256 avaliable,
+        bool cancelIsRestricted
     ) {
         UserVesting storage o = userVestings[userVestingId];
         require(o.receiver != address(0), "NOT_EXISTS");
@@ -111,6 +124,7 @@ contract Vesting is Ownable {
             totalAmount: o.totalAmount,
             withdrawnAmount: o.withdrawnAmount
         });
+        cancelIsRestricted = o.cancelIsRestricted;
     }
 
     function getWalletInfo(address wallet) external view returns(
@@ -130,7 +144,8 @@ contract Vesting is Ownable {
                 uint256 _totalAmount,
                 uint256 _withdrawnAmount,
                 uint256 _vestingParamsId,
-                uint256 _avaliable
+                uint256 _avaliable,
+                /* bool cancelIsRestricted */
             ) = getUserVesting(userVestingId);
             totalAmount += _totalAmount;
             alreadyWithdrawn += _withdrawnAmount;
@@ -139,27 +154,27 @@ contract Vesting is Ownable {
     }
 
     function createVestingPools(
-        uint16[] tgePercentage,
-        uint32[] tge,
-        uint32[] cliffDuration,
-        uint32[] vestingDuration,
-        uint32[] vestingInterval,
-        uint256[] totalAmount
+        uint16[] memory tgePercentageList,
+        uint32[] memory tgeList,
+        uint32[] memory cliffDurationList,
+        uint32[] memory vestingDurationList,
+        uint32[] memory vestingIntervalList,
+        uint256[] memory totalAmountList
     ) external onlyOwner {
-        uint256 length = tgePercentage.length;
-        require(tge.length == length, "length mismatch");
-        require(cliffDuration.length == length, "length mismatch");
-        require(vestingDuration.length == length, "length mismatch");
-        require(vestingInterval.length == length, "length mismatch");
-        require(totalAmount.length == length, "length mismatch");
+        uint256 length = tgePercentageList.length;
+        require(tgeList.length == length, "length mismatch");
+        require(cliffDurationList.length == length, "length mismatch");
+        require(vestingDurationList.length == length, "length mismatch");
+        require(vestingIntervalList.length == length, "length mismatch");
+        require(totalAmountList.length == length, "length mismatch");
         for (uint256 i=0; i < length; i++) {
             createVestingPool({
-                tgePercentage: tgePercentage[i],
-                tge: tge[i],
-                cliffDuration: cliffDuration[i],
-                vestingDuration: vestingDuration[i],
-                vestingInterval: vestingInterval[i],
-                totalAmount: totalAmount[i]
+                tgePercentage: tgePercentageList[i],
+                tge: tgeList[i],
+                cliffDuration: cliffDurationList[i],
+                vestingDuration: vestingDurationList[i],
+                vestingInterval: vestingIntervalList[i],
+                totalAmount: totalAmountList[i]
             });
         }
     }
@@ -183,15 +198,22 @@ contract Vesting is Ownable {
         vestingPools[vestingPoolId].totalAmount = totalAmount;
         coin.safeTransferFrom(msg.sender, address(this), totalAmount);
         emit VestingPoolCreated({
-            vestingPoolId: vestingPoolId
+            vestingPoolId: vestingPoolId,
+            tgePercentage: tgePercentage,
+            tge: tge,
+            cliffDuration: cliffDuration,
+            vestingDuration: vestingDuration,
+            vestingInterval: vestingInterval,
+            totalAmount: totalAmount
         });
     }
 
     function createUserVesting(
         address receiver,
         uint256 totalAmount,
-        uint256 vestingPoolId
-    ) external onlyOwner {
+        uint256 vestingPoolId,
+        bool cancelIsRestricted
+    ) public onlyOwner {
         require(receiver != address(0), "ZERO_ADDRESS");
         require(totalAmount > 0, "ZERO_AMOUNT");
         VestingPool storage vestingPool = vestingPools[vestingPoolId];
@@ -205,11 +227,62 @@ contract Vesting is Ownable {
             receiver: receiver,
             totalAmount: totalAmount,
             withdrawnAmount: 0,
-            vestingPoolId: vestingPoolId
+            vestingPoolId: vestingPoolId,
+            cancelIsRestricted: cancelIsRestricted
         });
         userVestingIds[receiver].push(userVestingId);
         emit UserVestingCreated({
-            userVestingId: userVestingId
+            userVestingId: userVestingId,
+            receiver: receiver,
+            totalAmount: totalAmount,
+            vestingPoolId: vestingPoolId,
+            cancelIsRestricted: cancelIsRestricted
+        });
+    }
+
+    function createUserVestings(
+        address[] memory receiverList,
+        uint256[] memory totalAmountList,
+        uint256[] memory vestingPoolIdList,
+        bool[] memory cancelIsRestrictedList
+    ) external onlyOwner {
+        uint256 length = receiverList.length;
+        require(totalAmountList.length == length, "length mismatch");
+        require(vestingPoolIdList.length == length, "length mismatch");
+        require(cancelIsRestrictedList.length == length, "length mismatch");
+        for (uint i = 0; i < length; i++) {
+            createUserVesting({
+                receiver: receiverList[i],
+                totalAmount: totalAmountList[i],
+                vestingPoolId: vestingPoolIdList[i],
+                cancelIsRestricted: cancelIsRestrictedList[i]
+            });
+        }
+    }
+
+    /// @notice cancel user vesting, returns the rest of tokens to the owner account
+    /// @param userVestingId userVestingId
+    /// @param indexInUserVestingIds index of `userVestingId` inside userVestingIds[receiver], to get rid of onchain for-loop to search
+    function cancelUserVesting(uint256 userVestingId, uint256 indexInUserVestingIds) external onlyOwner {
+        UserVesting storage userVesting = userVestings[userVestingId];
+        address receiver = userVesting.receiver;
+        require(receiver != address(0), "NOT_EXISTS");
+        require(!userVesting.cancelIsRestricted, "update is restricted");
+
+        uint256 restAmount = userVesting.totalAmount - userVesting.withdrawnAmount;
+
+        // remove from userVestingIds
+        require(indexInUserVestingIds < userVestingIds[receiver].length, "indexInUserVestingIds is out of range");
+        require(userVestingIds[receiver][indexInUserVestingIds] == userVestingId, "wrong indexInUserVestingIds");
+        if (indexInUserVestingIds != userVestingIds[msg.sender].length-1) {
+            userVestingIds[receiver][indexInUserVestingIds] = userVestingIds[receiver][userVestingIds[msg.sender].length-1];
+        }
+        userVestingIds[receiver].pop();
+
+        coin.safeTransfer(owner(), restAmount);
+        emit UserVestingCanceled({
+            userVestingId: userVestingId,
+            restAmount: restAmount
         });
     }
 
