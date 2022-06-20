@@ -3,7 +3,7 @@ pragma solidity ^0.6.0;
 import "./PolygonBridgeUtils.sol";
 
 
-contract ChildERC20 is
+contract ChildMintableERC20 is
     ERC20,
     IChildToken,
     AccessControlMixin,
@@ -18,7 +18,7 @@ contract ChildERC20 is
         uint8 decimals_,
         address childChainManager
     ) public ERC20(name_, symbol_) {
-        _setupContractId("ChildERC20");
+        _setupContractId("ChildMintableERC20");
         _setupDecimals(decimals_);
         _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
         _setupRole(DEPOSITOR_ROLE, childChainManager);
@@ -60,5 +60,16 @@ contract ChildERC20 is
      */
     function withdraw(uint256 amount) external {
         _burn(_msgSender(), amount);
+    }
+
+    /**
+     * @notice Example function to handle minting tokens on matic chain
+     * @dev Minting can be done as per requirement,
+     * This implementation allows only admin to mint tokens but it can be changed as per requirement
+     * @param user user for whom tokens are being minted
+     * @param amount amount of token to mint
+     */
+    function mint(address user, uint256 amount) public only(DEFAULT_ADMIN_ROLE) {
+        _mint(user, amount);
     }
 }
