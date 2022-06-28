@@ -42,6 +42,174 @@ def test_wrap(wrapper, botcore, admin, user0):
     assert tx.events['Transfer'][1]['tokenId'] == bot_id
 
 
+def test_wrap_getBot(wrapper, botcore, admin, user0):
+    coo = botcore.cooAddress()
+    tx = botcore.createPromoBot(0, user0, {"from": coo})
+    bot_id = tx.events['Birth']['botId']
+    botcore.approve(wrapper, bot_id, {"from": user0})
+    tx = wrapper.wrap(bot_id, {"from": user0})
+
+    assert tx.events['Transfer'][0]['from'] == user0
+    assert tx.events['Transfer'][0]['to'] == wrapper
+    assert tx.events['Transfer'][0]['tokenId'] == bot_id
+    assert tx.events['Transfer'][1]['from'] == ADDRESS_ZERO
+    assert tx.events['Transfer'][1]['to'] == user0
+    assert tx.events['Transfer'][1]['tokenId'] == bot_id
+
+    assert wrapper.getBot(bot_id) == botcore.getBot(bot_id)
+
+
+def test_wrap_and_transfer(wrapper, botcore, admin, user0, user1):
+    coo = botcore.cooAddress()
+    tx = botcore.createPromoBot(0, user0, {"from": coo})
+    bot_id = tx.events['Birth']['botId']
+    botcore.approve(wrapper, bot_id, {"from": user0})
+    tx = wrapper.wrap(bot_id, {"from": user0})
+
+    assert tx.events['Transfer'][0]['from'] == user0
+    assert tx.events['Transfer'][0]['to'] == wrapper
+    assert tx.events['Transfer'][0]['tokenId'] == bot_id
+    assert tx.events['Transfer'][1]['from'] == ADDRESS_ZERO
+    assert tx.events['Transfer'][1]['to'] == user0
+    assert tx.events['Transfer'][1]['tokenId'] == bot_id
+
+    wrapper.transfer(user1, bot_id, {"from": user0})
+    assert wrapper.ownerOf(bot_id) == user1
+
+
+def test_wrap_and_transfer_many(wrapper, botcore, admin, user0, user1):
+    coo = botcore.cooAddress()
+
+    tx = botcore.createPromoBot(0, user0, {"from": coo})
+    bot_id0 = tx.events['Birth']['botId']
+    botcore.approve(wrapper, bot_id0, {"from": user0})
+    tx = wrapper.wrap(bot_id0, {"from": user0})
+
+    tx = botcore.createPromoBot(1, user0, {"from": coo})
+    bot_id1 = tx.events['Birth']['botId']
+    botcore.approve(wrapper, bot_id1, {"from": user0})
+    tx = wrapper.wrap(bot_id1, {"from": user0})
+
+    wrapper.transferMany([user1, user1], [bot_id0, bot_id1], {"from": user0})
+    assert wrapper.ownerOf(bot_id0) == user1
+    assert wrapper.ownerOf(bot_id1) == user1
+
+
+def test_wrap_and_transfer_many_lengths_mismatch(wrapper, botcore, admin, user0, user1):
+    coo = botcore.cooAddress()
+
+    tx = botcore.createPromoBot(0, user0, {"from": coo})
+    bot_id0 = tx.events['Birth']['botId']
+    botcore.approve(wrapper, bot_id0, {"from": user0})
+    tx = wrapper.wrap(bot_id0, {"from": user0})
+
+    tx = botcore.createPromoBot(1, user0, {"from": coo})
+    bot_id1 = tx.events['Birth']['botId']
+    botcore.approve(wrapper, bot_id1, {"from": user0})
+    tx = wrapper.wrap(bot_id1, {"from": user0})
+
+    with reverts('Wrapper: lengths mismatch'):
+        wrapper.transferMany([user1, user1], [bot_id0], {"from": user0})
+
+
+def test_wrap_and_transferFrom_many(wrapper, botcore, admin, user0, user1, user2):
+    coo = botcore.cooAddress()
+
+    tx = botcore.createPromoBot(0, user0, {"from": coo})
+    bot_id0 = tx.events['Birth']['botId']
+    botcore.approve(wrapper, bot_id0, {"from": user0})
+    tx = wrapper.wrap(bot_id0, {"from": user0})
+
+    tx = botcore.createPromoBot(1, user0, {"from": coo})
+    bot_id1 = tx.events['Birth']['botId']
+    botcore.approve(wrapper, bot_id1, {"from": user0})
+    tx = wrapper.wrap(bot_id1, {"from": user0})
+
+    wrapper.approveMany([user1, user1], [bot_id0, bot_id1], {"from": user0})
+
+    wrapper.transferFromMany([user0, user0], [user2, user2], [bot_id0, bot_id1], {"from": user1})
+    assert wrapper.ownerOf(bot_id0) == user2
+    assert wrapper.ownerOf(bot_id1) == user2
+
+
+def test_wrap_and_transferFrom_many_lengths_mismatch(wrapper, botcore, admin, user0, user1, user2):
+    coo = botcore.cooAddress()
+
+    tx = botcore.createPromoBot(0, user0, {"from": coo})
+    bot_id0 = tx.events['Birth']['botId']
+    botcore.approve(wrapper, bot_id0, {"from": user0})
+    tx = wrapper.wrap(bot_id0, {"from": user0})
+
+    tx = botcore.createPromoBot(1, user0, {"from": coo})
+    bot_id1 = tx.events['Birth']['botId']
+    botcore.approve(wrapper, bot_id1, {"from": user0})
+    tx = wrapper.wrap(bot_id1, {"from": user0})
+
+
+    with reverts('Wrapper: lengths mismatch'):
+        wrapper.approveMany([user1, user1], [bot_id0], {"from": user0})
+
+    wrapper.approveMany([user1, user1], [bot_id0, bot_id1], {"from": user0})
+
+    with reverts('Wrapper: lengths mismatch'):
+        wrapper.transferFromMany([user0, user0], [user2], [bot_id0, bot_id1], {"from": user1})
+
+    with reverts('Wrapper: lengths mismatch'):
+        wrapper.transferFromMany([user0, user0], [user2, user2], [bot_id0], {"from": user1})
+
+
+def test_wrap_pause(wrapper, botcore, admin, user0):
+    coo = botcore.cooAddress()
+    tx = botcore.createPromoBot(0, user0, {"from": coo})
+    bot_id = tx.events['Birth']['botId']
+    botcore.approve(wrapper, bot_id, {"from": user0})
+
+    wrapper.pause({"from": admin})
+
+    with reverts('ERC721Pausable: token transfer while paused'):
+        wrapper.wrap(bot_id, {"from": user0})
+
+
+def test_wrap_pause_unpause(wrapper, botcore, admin, user0):
+    coo = botcore.cooAddress()
+    tx = botcore.createPromoBot(0, user0, {"from": coo})
+    bot_id = tx.events['Birth']['botId']
+    botcore.approve(wrapper, bot_id, {"from": user0})
+
+    wrapper.pause({"from": admin})
+    wrapper.unpause({"from": admin})
+
+    tx = wrapper.wrap(bot_id, {"from": user0})
+
+    assert tx.events['Transfer'][0]['from'] == user0
+    assert tx.events['Transfer'][0]['to'] == wrapper
+    assert tx.events['Transfer'][0]['tokenId'] == bot_id
+    assert tx.events['Transfer'][1]['from'] == ADDRESS_ZERO
+    assert tx.events['Transfer'][1]['to'] == user0
+    assert tx.events['Transfer'][1]['tokenId'] == bot_id
+
+    wrapper.setBaseURI('xxx/', {"from": admin})
+    assert wrapper.tokenURI(bot_id, {"from": admin}) == f'xxx/{bot_id}'
+
+
+def test_wrap_and_check_token_uri(wrapper, botcore, admin, user0):
+    coo = botcore.cooAddress()
+    tx = botcore.createPromoBot(0, user0, {"from": coo})
+    bot_id = tx.events['Birth']['botId']
+    botcore.approve(wrapper, bot_id, {"from": user0})
+    tx = wrapper.wrap(bot_id, {"from": user0})
+
+    assert tx.events['Transfer'][0]['from'] == user0
+    assert tx.events['Transfer'][0]['to'] == wrapper
+    assert tx.events['Transfer'][0]['tokenId'] == bot_id
+    assert tx.events['Transfer'][1]['from'] == ADDRESS_ZERO
+    assert tx.events['Transfer'][1]['to'] == user0
+    assert tx.events['Transfer'][1]['tokenId'] == bot_id
+
+    wrapper.setBaseURI('xxx/', {"from": admin})
+    assert wrapper.tokenURI(bot_id, {"from": admin}) == f'xxx/{bot_id}'
+
+
 def test_wrap_many(wrapper, botcore, admin, user0):
     coo = botcore.cooAddress()
     tx = botcore.createPromoBot(0, user0, {"from": coo})
